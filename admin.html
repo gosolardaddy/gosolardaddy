@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>GoSolarDaddy — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #091e3a; --card: #0f2744; --border: rgba(255,255,255,0.08);
+  --blue: #29ABE2; --yellow: #F7B731; --green: #22c55e;
+  --red: #ef4444; --soft: #94a3b8;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100vh; font-family: 'Inter', -apple-system, sans-serif; background: #091e3a; background-image: radial-gradient(ellipse at 50% 0%, #1a5a8a 0%, #091e3a 70%); background-attachment: fixed; color: #fff; -webkit-font-smoothing: antialiased; }
+button { font-family: 'Inter', -apple-system, sans-serif; }
+
+/* ── LOGIN ── */
+#loginScreen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; }
+.login-logo { font-size: 42px; font-weight: 900; letter-spacing: -0.04em; margin-bottom: 6px; }
+.login-logo span { color: #a8dff0; }
+.login-tagline { font-size: 10px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 32px; white-space: nowrap; }
+.login-box { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 40px 36px; width: 100%; max-width: 380px; box-shadow: 0 24px 80px rgba(0,0,0,0.4); }
+.login-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); margin-bottom: 6px; }
+.login-input { width: 100%; padding: 13px 16px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: #fff; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; margin-bottom: 16px; transition: border-color 0.15s; }
+.login-input:focus { border-color: var(--blue); }
+.login-btn { width: 100%; padding: 14px; border-radius: 10px; border: none; background: var(--yellow); color: var(--navy); font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 800; cursor: pointer; }
+.login-btn:hover { opacity: 0.9; }
+.login-err { color: #f87171; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+
+/* ── ADMIN PANEL ── */
+#adminPanel { display: none; min-height: 100vh; flex-direction: column; }
+
+/* ── TOPBAR ── */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border); background: rgba(9,30,58,0.95); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 100; flex-shrink: 0; }
+.topbar-logo { font-size: 18px; font-weight: 900; letter-spacing: -0.03em; white-space: nowrap; }
+.topbar-logo span { color: #a8dff0; }
+.topbar-sub { font-size: 12px; color: var(--soft); font-weight: 500; margin-left: 8px; }
+.logout-btn { padding: 7px 14px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--soft); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.logout-btn:hover { color: #f87171; border-color: rgba(239,68,68,0.4); }
+
+/* ── TABS ── */
+.tab-nav { display: flex; gap: 4px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: rgba(9,30,58,0.6); overflow-x: auto; -webkit-overflow-scrolling: touch; flex-shrink: 0; }
+.tab-btn { padding: 8px 18px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: var(--soft); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.tab-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.tab-btn.active { background: rgba(255,255,255,0.08); border-color: var(--border); color: #fff; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── TOAST ── */
+.toast { position: fixed; top: 20px; right: 20px; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; padding: 12px 20px; border-radius: 10px; z-index: 400; transform: translateY(-80px); opacity: 0; transition: all 0.3s ease; }
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── SAVE BAR ── */
+.save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(9,30,58,0.97); border-top: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; backdrop-filter: blur(10px); transform: translateY(100%); transition: transform 0.25s ease; z-index: 200; flex-wrap: wrap; }
+.save-bar.visible { transform: translateY(0); }
+.save-bar-msg { font-size: 13px; color: var(--soft); }
+.save-bar-msg strong { color: #fff; }
+.save-bar-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.save-btn { padding: 9px 20px; border-radius: 8px; border: none; background: var(--yellow); color: var(--navy); font-size: 13px; font-weight: 800; cursor: pointer; }
+.copy-btn { padding: 9px 16px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: var(--soft); font-size: 13px; font-weight: 600; cursor: pointer; }
+.copy-btn:hover { color: #fff; }
+
+/* ── CODE MODAL ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 300; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 100%; max-width: 680px; max-height: 85vh; display: flex; flex-direction: column; gap: 14px; }
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-sub { font-size: 13px; color: var(--soft); line-height: 1.6; }
+.code-block { background: rgba(0,0,0,0.4); border: 1px solid var(--border); border-radius: 10px; padding: 16px; font-family: monospace; font-size: 12px; color: #a8dff0; overflow-y: auto; max-height: 280px; white-space: pre; line-height: 1.6; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-copy-btn { padding: 10px 20px; border-radius: 8px; border: none; background: var(--yellow); color: var(--navy); font-size: 13px; font-weight: 800; cursor: pointer; }
+.modal-close-btn { padding: 10px 20px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--soft); font-size: 13px; cursor: pointer; }
+
+/* ══════════════════════════════════
+   DESKTOP STYLES (≥768px)
+══════════════════════════════════ */
+.desk-only { display: none; }
+.mob-only { display: block; }
+
+@media (min-width: 768px) {
+  .desk-only { display: block; }
+  .mob-only { display: none; }
+  .desk-flex { display: flex !important; }
+
+  .content { padding: 28px 32px; max-width: 960px; margin: 0 auto; }
+
+  .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); margin-bottom: 16px; }
+
+  /* Add user form */
+  .add-form { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 28px; }
+  .form-row-desk { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+  .field input { padding: 11px 14px; border-radius: 8px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  .field input:focus { border-color: var(--blue); }
+  .field input::placeholder { color: #475569; }
+  .add-btn { padding: 11px 20px; border-radius: 8px; border: none; background: var(--green); color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; height: 42px; }
+  .add-btn:hover { opacity: 0.85; }
+
+  /* Users table */
+  .users-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); padding: 12px 24px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody td { padding: 14px 24px; font-size: 14px; color: #fff; }
+  tbody td.muted { color: var(--soft); font-size: 13px; }
+  .pw-cell { display: flex; align-items: center; gap: 8px; }
+  .pw-text { font-family: monospace; font-size: 13px; color: var(--soft); letter-spacing: 0.05em; }
+  .pw-hidden { letter-spacing: 0.1em; color: #334155; }
+  .toggle-pw { background: none; border: none; cursor: pointer; color: #475569; font-size: 13px; padding: 2px 6px; border-radius: 4px; }
+  .toggle-pw:hover { color: var(--soft); }
+  .delete-btn { padding: 6px 14px; border-radius: 6px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .delete-btn:hover { background: rgba(239,68,68,0.18); }
+  .empty-state { padding: 48px 24px; text-align: center; color: var(--soft); font-size: 14px; }
+
+  /* Commission cards */
+  .commission-summary { display: flex; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+  .commission-card { flex: 1; min-width: 160px; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; }
+  .commission-card.highlight { border-color: rgba(247,183,49,0.3); background: rgba(247,183,49,0.06); }
+  .commission-card .label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); margin-bottom: 8px; }
+  .commission-card .value { font-size: 28px; font-weight: 300; letter-spacing: -0.02em; color: #fff; }
+  .commission-card.highlight .value { color: var(--yellow); }
+  .commission-card .sub { font-size: 11px; color: var(--soft); margin-top: 4px; }
+}
+
+/* ══════════════════════════════════
+   MOBILE STYLES (<768px)
+══════════════════════════════════ */
+@media (max-width: 767px) {
+  .mob-content { padding: 16px; }
+
+  .mob-section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; }
+
+  /* Add user form - stacked */
+  .mob-add-form { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+  .mob-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .mob-field label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); }
+  .mob-field input { padding: 12px 14px; border-radius: 9px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: #fff; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; }
+  .mob-field input:focus { border-color: var(--blue); }
+  .mob-field input::placeholder { color: #475569; }
+  .mob-add-btn { width: 100%; padding: 12px; border-radius: 9px; border: none; background: var(--green); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 4px; -webkit-tap-highlight-color: transparent; }
+
+  /* User cards */
+  .mob-user-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 10px; }
+  .mob-user-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .mob-user-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .mob-user-username { font-size: 12px; color: var(--soft); margin-top: 2px; }
+  .mob-delete-btn { padding: 6px 14px; border-radius: 7px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.08); color: #f87171; font-size: 12px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .mob-user-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mob-meta-cell { background: rgba(255,255,255,0.03); border-radius: 8px; padding: 9px 11px; }
+  .mob-meta-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #3d5166; margin-bottom: 3px; }
+  .mob-meta-val { font-size: 13px; font-weight: 600; color: #94a3b8; }
+  .mob-pw-row { display: flex; align-items: center; justify-content: space-between; }
+  .mob-pw-toggle { background: none; border: none; cursor: pointer; color: #475569; font-size: 14px; padding: 2px 4px; -webkit-tap-highlight-color: transparent; }
+
+  /* Commission cards */
+  .mob-commission-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+  .mob-commission-card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 14px 16px; }
+  .mob-commission-card.highlight { border-color: rgba(247,183,49,0.3); background: rgba(247,183,49,0.06); grid-column: span 2; }
+  .mob-commission-label { font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); margin-bottom: 6px; }
+  .mob-commission-value { font-size: 26px; font-weight: 300; color: #fff; letter-spacing: -0.02em; }
+  .mob-commission-card.highlight .mob-commission-value { color: var(--yellow); }
+  .mob-commission-sub { font-size: 10px; color: var(--soft); margin-top: 3px; }
+
+  /* Deal cards */
+  .mob-deal-card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 15px; margin-bottom: 10px; }
+  .mob-deal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .mob-deal-name { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+  .mob-deal-date { font-size: 11px; color: #3d5166; margin-top: 2px; }
+  .mob-deal-commission { font-size: 16px; font-weight: 800; color: var(--yellow); }
+  .mob-deal-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Search */
+  .mob-search { width: 100%; padding: 11px 14px; border-radius: 9px; border: 1px solid var(--border); background: rgba(255,255,255,0.05); color: #fff; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; margin-bottom: 14px; }
+  .mob-search:focus { border-color: var(--blue); }
+
+  /* Empty state */
+  .mob-empty { text-align: center; padding: 40px 20px; color: var(--soft); font-size: 14px; }
+
+  /* Search desktop */
+  .desk-search { display: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── LOGIN ── -->
+<div id="loginScreen">
+  <div style="text-align:center;">
+    <div class="login-logo">Go<span>Solar</span>Daddy<sup style="font-size:14px;font-weight:400;vertical-align:super;color:rgba(255,255,255,0.4);">®</sup></div>
+    <div class="login-tagline">Admin Panel · Authorized Access Only</div>
+  </div>
+  <div class="login-box">
+    <label class="login-label">Admin Password</label>
+    <input class="login-input" type="password" id="adminPwInput" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doAdminLogin()">
+    <button class="login-btn" onclick="doAdminLogin()">Access Admin Panel</button>
+    <div class="login-err" id="loginErr">Incorrect password.</div>
+  </div>
+</div>
+
+<!-- ── ADMIN PANEL ── -->
+<div id="adminPanel">
+
+  <div class="topbar">
+    <div class="topbar-logo">Go<span>Solar</span>Daddy <span class="topbar-sub">Admin</span></div>
+    <button class="logout-btn" onclick="doLogout()">Log Out</button>
+  </div>
+
+  <div class="tab-nav">
+    <button class="tab-btn active" onclick="showTab('accounts')" id="tab-accounts">👥 Accounts</button>
+    <button class="tab-btn" onclick="showTab('deals')" id="tab-deals">💰 Closed Deals</button>
+  </div>
+
+  <!-- ════════════════════════════
+       ACCOUNTS TAB
+  ════════════════════════════ -->
+  <div class="tab-panel active" id="panel-accounts">
+
+    <!-- DESKTOP ADD FORM -->
+    <div class="desk-only content">
+      <div class="section-title">Add New Salesperson</div>
+      <div class="add-form">
+        <div class="form-row-desk">
+          <div class="field">
+            <label>Full Name</label>
+            <input type="text" id="newNameDesk" placeholder="Jane Smith">
+          </div>
+          <div class="field">
+            <label>Username</label>
+            <input type="text" id="newUsernameDesk" placeholder="jsmith" autocomplete="off">
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="text" id="newPasswordDesk" placeholder="solar2024" autocomplete="off">
+          </div>
+          <button class="add-btn" onclick="addUser('desk')">+ Add</button>
+        </div>
+        <div class="form-err" id="formErrDesk" style="color:#f87171;font-size:12px;margin-top:10px;display:none;"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:0;">Salesperson Accounts (<span id="userCountDesk">0</span>)</div>
+        <div style="position:relative;" class="desk-search">
+          <input type="text" id="searchDesk" placeholder="Search by name or username…" oninput="filterUsersDesk()"
+            style="padding:9px 14px 9px 36px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;font-family:'Inter',sans-serif;font-size:13px;outline:none;width:260px;"
+            onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--border)'">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--soft);font-size:13px;pointer-events:none;">🔍</span>
+        </div>
+      </div>
+      <div class="users-card">
+        <table>
+          <thead><tr><th>Name</th><th>Username</th><th>Password</th><th>Added</th><th></th></tr></thead>
+          <tbody id="usersBodyDesk"></tbody>
+        </table>
+        <div class="empty-state" id="emptyDesk" style="display:none;">No salesperson accounts yet. Add one above.</div>
+      </div>
+    </div>
+
+    <!-- MOBILE ADD FORM + CARDS -->
+    <div class="mob-only mob-content">
+      <div class="mob-section-title">Add New Salesperson</div>
+      <div class="mob-add-form">
+        <div class="mob-field">
+          <label>Full Name</label>
+          <input type="text" id="newNameMob" placeholder="Jane Smith">
+        </div>
+        <div class="mob-field">
+          <label>Username</label>
+          <input type="text" id="newUsernameMob" placeholder="jsmith" autocomplete="off">
+        </div>
+        <div class="mob-field">
+          <label>Password</label>
+          <input type="text" id="newPasswordMob" placeholder="solar2024" autocomplete="off">
+        </div>
+        <div id="formErrMob" style="color:#f87171;font-size:12px;margin-bottom:8px;display:none;"></div>
+        <button class="mob-add-btn" onclick="addUser('mob')">+ Add Salesperson</button>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="mob-section-title" style="margin-bottom:0;">Accounts (<span id="userCountMob">0</span>)</div>
+      </div>
+      <input type="text" class="mob-search" id="searchMob" placeholder="🔍  Search by name or username…" oninput="filterUsersMob()">
+      <div id="usersCardsMob"></div>
+      <div class="mob-empty" id="emptyMob" style="display:none;">No salesperson accounts yet. Add one above.</div>
+    </div>
+
+  </div><!-- end #panel-accounts -->
+
+  <!-- ════════════════════════════
+       DEALS TAB
+  ════════════════════════════ -->
+  <div class="tab-panel" id="panel-deals">
+
+    <!-- DESKTOP DEALS -->
+    <div class="desk-only content">
+      <div class="commission-summary">
+        <div class="commission-card highlight">
+          <div class="label">You Are Owed</div>
+          <div class="value" id="totalOwedDesk">$0</div>
+          <div class="sub">@ $500 per closed deal</div>
+        </div>
+        <div class="commission-card">
+          <div class="label">Deals Closed</div>
+          <div class="value" id="totalDealsDesk">0</div>
+          <div class="sub">total won leads</div>
+        </div>
+        <div class="commission-card">
+          <div class="label">Total Commissions</div>
+          <div class="value" id="totalDealValueDesk">$0</div>
+          <div class="sub">combined contract value</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div class="section-title" style="margin-bottom:0;">Closed Deal Log</div>
+        <button onclick="loadDeals()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--soft);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">↻ Refresh</button>
+      </div>
+      <div class="users-card">
+        <table>
+          <thead><tr><th>Lead Name</th><th>Closed By</th><th>Closed Date</th><th>Address</th><th>Commission</th><th>Paid</th></tr></thead>
+          <tbody id="dealsBodyDesk"></tbody>
+        </table>
+        <div class="empty-state" id="dealsEmptyDesk">No closed deals yet. They'll appear here when a salesperson marks a lead as Closed Won.</div>
+      </div>
+    </div>
+
+    <!-- MOBILE DEALS -->
+    <div class="mob-only mob-content">
+      <div class="mob-commission-grid">
+        <div class="mob-commission-card highlight">
+          <div class="mob-commission-label">You Are Owed</div>
+          <div class="mob-commission-value" id="totalOwedMob">$0</div>
+          <div class="mob-commission-sub">@ $500 per closed deal</div>
+        </div>
+        <div class="mob-commission-card">
+          <div class="mob-commission-label">Deals Closed</div>
+          <div class="mob-commission-value" id="totalDealsMob">0</div>
+          <div class="mob-commission-sub">total won leads</div>
+        </div>
+        <div class="mob-commission-card">
+          <div class="mob-commission-label">Total Commissions</div>
+          <div class="mob-commission-value" id="totalDealValueMob">$0</div>
+          <div class="mob-commission-sub">combined contracts</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div class="mob-section-title" style="margin-bottom:0;">Closed Deal Log</div>
+        <button onclick="loadDeals()" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--soft);font-family:'Inter',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">↻ Refresh</button>
+      </div>
+      <div id="dealCardsMob"></div>
+      <div class="mob-empty" id="dealsEmptyMob" style="display:none;">No closed deals yet. They'll appear here when a salesperson marks a lead as Closed Won.</div>
+    </div>
+
+  </div><!-- end #panel-deals -->
+
+  </div><!-- end #adminPanel -->
+
+<script>
+const ADMIN_PASSWORD = 'solardaddy17';
+const AIRTABLE_TOKEN = 'patL9pYeqIakoUo9D.c6f378940fe0424ff1c36fb39803e75880abfe3d9c039528797744d4d9a828fb';
+const AIRTABLE_BASE  = 'appoziRWIqfd5hdWQ';
+const AIRTABLE_TABLE = 'Leads';
+const COMMISSION     = 500;
+
+let users = [];
+const AIRTABLE_USERS = 'Users';
+
+
+let pwVisible = {};
+const isMobile = () => window.innerWidth < 768;
+
+// ── AUTH ──────────────────────────────
+function doAdminLogin() {
+  const pw = document.getElementById('adminPwInput').value;
+  if (pw !== ADMIN_PASSWORD) { document.getElementById('loginErr').style.display='block'; return; }
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminPanel').style.display  = 'flex';
+  loadUsers();
+}
+
+function doLogout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminPanel').style.display  = 'none';
+  document.getElementById('adminPwInput').value = '';
+  document.getElementById('loginErr').style.display = 'none';
+  
+}
+
+// ── TABS ──────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('panel-'+tab).classList.add('active');
+  if (tab === 'deals') loadDeals();
+}
+
+// ── LOAD USERS FROM AIRTABLE ──────────
+async function loadUsers() {
+  try {
+    const data = await (await fetch(
+      `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_USERS)}`,
+      { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } }
+    )).json();
+    users = (data.records || []).map(r => ({
+      id: r.id,
+      name: r.fields['Name'] || '',
+      username: r.fields['Username'] || '',
+      password: r.fields['Password'] || '',
+      added: r.fields['Added'] || ''
+    }));
+    renderUsers();
+  } catch(e) {
+    showToast('Failed to load users');
+  }
+}
+
+async function addUser(mode) {
+  const name     = document.getElementById('newName'+cap(mode)).value.trim();
+  const username = document.getElementById('newUsername'+cap(mode)).value.trim().toLowerCase();
+  const password = document.getElementById('newPassword'+cap(mode)).value.trim();
+  const errEl    = document.getElementById('formErr'+cap(mode));
+
+  if (!name || !username || !password) {
+    errEl.textContent = 'Please fill in all fields.'; errEl.style.display='block'; return;
+  }
+  if (users.find(u=>u.username===username)) {
+    errEl.textContent = `Username "${username}" already exists.`; errEl.style.display='block'; return;
+  }
+  errEl.style.display = 'none';
+
+  const today = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+  try {
+    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_USERS)}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { Name: name, Username: username, Password: password, Added: today } })
+    });
+    document.getElementById('newName'+cap(mode)).value = '';
+    document.getElementById('newUsername'+cap(mode)).value = '';
+    document.getElementById('newPassword'+cap(mode)).value = '';
+    await loadUsers();
+    showToast(`✓ ${name} added`);
+  } catch(e) {
+    showToast('Failed to add user');
+  }
+}
+
+
+function cap(s) { return s.charAt(0).toUpperCase()+s.slice(1); }
+
+// ── DELETE USER ───────────────────────
+async function deleteUser(username) {
+  const user = users.find(u=>u.username===username);
+  if (!user) return;
+  if (!confirm(`Remove ${user.name} (@${username})? They will lose dashboard access.`)) return;
+  try {
+    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_USERS)}/${user.id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
+    });
+    await loadUsers();
+    showToast(`Removed @${username}`);
+  } catch(e) {
+    showToast('Failed to remove user');
+  }
+}
+
+function togglePw(username) {
+  pwVisible[username] = !pwVisible[username];
+  renderUsers();
+}
+
+// ── RENDER USERS ──────────────────────
+function renderUsers() {
+  const count = users.length;
+  document.getElementById('userCountDesk').textContent = count;
+  document.getElementById('userCountMob').textContent  = count;
+
+  // ── DESKTOP TABLE ──
+  const tbody = document.getElementById('usersBodyDesk');
+  const emptyDesk = document.getElementById('emptyDesk');
+  if (!count) { tbody.innerHTML=''; emptyDesk.style.display='block'; }
+  else {
+    emptyDesk.style.display = 'none';
+    tbody.innerHTML = users.map(u => {
+      const vis = pwVisible[u.username];
+      const pwDisplay = vis
+        ? `<span class="pw-text">${u.password}</span>`
+        : `<span class="pw-text pw-hidden">${'•'.repeat(Math.min(u.password.length,10))}</span>`;
+      return `<tr>
+        <td><strong>${u.name}</strong></td>
+        <td class="muted">@${u.username}</td>
+        <td><div class="pw-cell">${pwDisplay}
+          <button class="toggle-pw" onclick="togglePw('${u.username}')">${vis?'🙈':'👁'}</button>
+        </div></td>
+        <td class="muted">${u.added}</td>
+        <td><button class="delete-btn" onclick="deleteUser('${u.username}')">Remove</button></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── MOBILE CARDS ──
+  const cardsEl = document.getElementById('usersCardsMob');
+  const emptyMob = document.getElementById('emptyMob');
+  if (!count) { cardsEl.innerHTML=''; emptyMob.style.display='block'; }
+  else {
+    emptyMob.style.display = 'none';
+    cardsEl.innerHTML = users.map(u => {
+      const vis = pwVisible[u.username];
+      const pwDisplay = vis ? u.password : '•'.repeat(Math.min(u.password.length,10));
+      return `<div class="mob-user-card" id="ucard-${u.username}">
+        <div class="mob-user-header">
+          <div>
+            <div class="mob-user-name">${u.name}</div>
+            <div class="mob-user-username">@${u.username}</div>
+          </div>
+          <button class="mob-delete-btn" onclick="deleteUser('${u.username}')">Remove</button>
+        </div>
+        <div class="mob-user-meta">
+          <div class="mob-meta-cell">
+            <div class="mob-meta-label">Password</div>
+            <div class="mob-pw-row">
+              <div class="mob-meta-val" style="font-family:monospace;letter-spacing:${vis?'0.05em':'0.1em'}">${pwDisplay}</div>
+              <button class="mob-pw-toggle" onclick="togglePw('${u.username}')">${vis?'🙈':'👁'}</button>
+            </div>
+          </div>
+          <div class="mob-meta-cell">
+            <div class="mob-meta-label">Added</div>
+            <div class="mob-meta-val">${u.added}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function filterUsersDesk() {
+  const q = document.getElementById('searchDesk').value.toLowerCase();
+  document.querySelectorAll('#usersBodyDesk tr').forEach(row => {
+    row.style.display = !q || row.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function filterUsersMob() {
+  const q = document.getElementById('searchMob').value.toLowerCase();
+  document.querySelectorAll('#usersCardsMob .mob-user-card').forEach(card => {
+    card.style.display = !q || card.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── DEALS ─────────────────────────────
+async function loadDeals() {
+  // Set loading state
+  document.getElementById('dealsBodyDesk').innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--soft);font-size:13px;">Loading deals…</td></tr>';
+  document.getElementById('dealCardsMob').innerHTML  = '<div class="mob-empty">Loading deals…</div>';
+  document.getElementById('dealsEmptyDesk').style.display = 'none';
+  document.getElementById('dealsEmptyMob').style.display  = 'none';
+
+  try {
+    let records = [], offset = null;
+    do {
+      const url  = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}?pageSize=100${offset?'&offset='+offset:''}`;
+      const data = await (await fetch(url,{headers:{Authorization:`Bearer ${AIRTABLE_TOKEN}`}})).json();
+      records    = records.concat(data.records||[]);
+      offset     = data.offset;
+    } while (offset);
+
+    const deals = records
+      .map(r=>({...r.fields,id:r.id}))
+      .filter(r=>r['Status'] && r['Status'].toLowerCase()==='closed won')
+      .sort((a,b)=>new Date(b['Closed Date']||0)-new Date(a['Closed Date']||0));
+
+    const unpaidOwed = deals.filter(d=>!d['Commission Paid']).length * COMMISSION;
+
+    // Update stats — desktop
+    document.getElementById('totalOwedDesk').textContent      = '$'+unpaidOwed.toLocaleString();
+    document.getElementById('totalDealsDesk').textContent     = deals.length;
+    document.getElementById('totalDealValueDesk').textContent = deals.length ? '$'+(deals.length * COMMISSION).toLocaleString() : '—';
+    // Update stats — mobile
+    document.getElementById('totalOwedMob').textContent       = '$'+unpaidOwed.toLocaleString();
+    document.getElementById('totalDealsMob').textContent      = deals.length;
+    document.getElementById('totalDealValueMob').textContent  = deals.length ? '$'+(deals.length * COMMISSION).toLocaleString() : '—';
+
+    if (!deals.length) {
+      document.getElementById('dealsBodyDesk').innerHTML = '';
+      document.getElementById('dealCardsMob').innerHTML  = '';
+      document.getElementById('dealsEmptyDesk').style.display = 'block';
+      document.getElementById('dealsEmptyMob').style.display  = 'block';
+      return;
+    }
+
+    // Desktop table rows
+    document.getElementById('dealsBodyDesk').innerHTML = deals.map(d => {
+      const name = [d['First Name'],d['Last Name']].filter(Boolean).join(' ')||'—';
+      const paid = d['Commission Paid'];
+      return `<tr style="${paid?'opacity:0.55':''}">
+        <td><strong>${name}</strong></td>
+        <td class="muted">${d['Closed By']||'—'}</td>
+        <td class="muted">${d['Closed Date']||'—'}</td>
+        <td class="muted">${d['Address']||'—'}</td>
+        <td style="color:${paid?'var(--soft)':'var(--yellow)'};font-weight:700;">${paid?'<span style="color:#22c55e;">✅ Paid</span>':'$'+COMMISSION.toLocaleString()}</td>
+        <td>${paid?'<span style="color:#22c55e;font-size:12px;font-weight:600;">Paid</span>':`<button onclick="markPaid('${d.id}')" style="padding:5px 12px;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.08);color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">Marked Paid</button>`}</td>
+      </tr>`;
+    }).join('');
+
+    // Mobile deal cards
+    document.getElementById('dealCardsMob').innerHTML = deals.map(d => {
+      const name = [d['First Name'],d['Last Name']].filter(Boolean).join(' ')||'—';
+      const paid = d['Commission Paid'];
+      return `<div class="mob-deal-card" style="${paid?'opacity:0.6':''}">
+        <div class="mob-deal-header">
+          <div>
+            <div class="mob-deal-name">${name}</div>
+            <div class="mob-deal-date">${d['Closed Date']||'—'} · ${d['Closed By']||'—'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="mob-deal-commission" style="color:${paid?'#22c55e':'var(--yellow)'};">${paid?'✅ Paid':'$'+COMMISSION.toLocaleString()}</div>
+            ${!paid?`<button onclick="markPaid('${d.id}')" style="margin-top:6px;padding:5px 12px;border-radius:6px;border:1px solid rgba(34,197,94,0.4);background:rgba(34,197,94,0.08);color:#22c55e;font-size:11px;font-weight:700;cursor:pointer;">Mark Paid</button>`:''}
+          </div>
+        </div>
+        ${d['Address']?`<div style="font-size:12px;color:#3d5166;margin-top:4px;">${d['Address']}</div>`:''}
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    document.getElementById('dealsBodyDesk').innerHTML = '<tr><td colspan="6" style="padding:24px;text-align:center;color:#f87171;font-size:13px;">Failed to load deals. Check your connection.</td></tr>';
+    document.getElementById('dealCardsMob').innerHTML  = '<div class="mob-empty" style="color:#f87171;">Failed to load deals. Check your connection.</div>';
+  }
+}
+
+async function markPaid(leadId) {
+  await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}/${leadId}`, {
+    method:'PATCH',
+    headers:{ Authorization:`Bearer ${AIRTABLE_TOKEN}`, 'Content-Type':'application/json' },
+    body: JSON.stringify({ fields: { 'Commission Paid': true } })
+  });
+  loadDeals();
+}
+
+
+
+function showCode() {
+  document.getElementById('codeBlock').textContent = generateCode();
+  document.getElementById('codeModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('codeModal').classList.remove('open'); }
+
+function copyCode() {
+  navigator.clipboard.writeText(generateCode()).then(()=>{
+    unsavedChanges=0;  showToast('✓ Code copied to clipboard!');
+  });
+}
+
+function copyCodeFromModal() {
+  navigator.clipboard.writeText(generateCode()).then(()=>{
+    closeModal(); unsavedChanges=0;  showToast('✓ Code copied to clipboard!');
+  });
+}
+
+
+
+
+
+document.getElementById('codeModal').addEventListener('click', function(e){
+  if (e.target===this) closeModal();
+});
+</script>
+</body>
+</html>
