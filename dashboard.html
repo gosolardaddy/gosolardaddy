@@ -486,13 +486,14 @@ async function loadLeads() {
 async function saveStatusToAirtable(leadId, status) {
   const fields = { Status: status };
   if (status === 'Closed Won') {
-    fields['Closed Date'] = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    fields['Closed By'] = currentUser.name;
+    const now = new Date();
+    fields['Closed Date'] = now.toISOString().split('T')[0]; // YYYY-MM-DD for Airtable date fields
+    fields['Closed By'] = currentUser ? currentUser.name : '';
   }
   try {
     const res = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}/${leadId}`, {
       method:'PATCH', headers:{ Authorization:`Bearer ${AIRTABLE_TOKEN}`, 'Content-Type':'application/json' },
-      body: JSON.stringify({ fields })
+      body: JSON.stringify({ typecast: true, fields })
     });
     const data = await res.json();
     if (!res.ok) {
@@ -500,7 +501,7 @@ async function saveStatusToAirtable(leadId, status) {
       return;
     }
     const lead = allLeads.find(l => l.id === leadId);
-    if (lead) { lead['Status'] = status; if (status === 'Closed Won') { lead['Closed Date']=fields['Closed Date']; lead['Closed By']=currentUser.name; } }
+    if (lead) { lead['Status'] = status; if (status === 'Closed Won') { lead['Closed Date']=fields['Closed Date']; lead['Closed By']=fields['Closed By']; } }
   } catch(e) {
     alert('❌ Network error saving status: ' + e.message);
   }

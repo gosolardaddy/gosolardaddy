@@ -650,7 +650,7 @@ async function unlockDeal(leadId) {
   await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}/${leadId}`, {
     method:'PATCH',
     headers:{ Authorization:`Bearer ${AIRTABLE_TOKEN}`, 'Content-Type':'application/json' },
-    body: JSON.stringify({ fields: { 'Status': 'Contacted', 'Closed Date': null, 'Closed By': null, 'Commission Paid': null } })
+    body: JSON.stringify({ fields: { 'Status': 'Contacted', 'Closed Date': null, 'Closed By': null, 'Commission Paid': false } })
   });
   loadDeals();
 }
