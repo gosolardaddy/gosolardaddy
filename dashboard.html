@@ -145,6 +145,20 @@ tbody td.muted { color: #64748b; font-size: 12px; }
 .loading-wrap { text-align: center; padding: 80px 32px; color: var(--soft); }
 .loading-spin { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(41,171,226,0.15); border-top-color: var(--blue); animation: spin 0.7s linear infinite; margin: 0 auto 16px; }
 
+/* ── CLOSED WON CONFIRM MODAL ── */
+.cw-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:500; align-items:center; justify-content:center; padding:20px; }
+.cw-overlay.open { display:flex; }
+.cw-modal { background:#0f2847; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:28px 24px; width:100%; max-width:400px; text-align:center; }
+.cw-icon { font-size:36px; margin-bottom:12px; }
+.cw-title { font-size:17px; font-weight:800; margin-bottom:8px; }
+.cw-sub { font-size:13px; color:#94a3b8; line-height:1.6; margin-bottom:24px; }
+.cw-actions { display:flex; gap:10px; }
+.cw-confirm { flex:1; padding:12px; border-radius:10px; border:none; background:#22c55e; color:#fff; font-family:'Inter',sans-serif; font-size:14px; font-weight:800; cursor:pointer; }
+.cw-confirm:hover { opacity:0.88; }
+.cw-cancel { flex:1; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
+.cw-cancel:hover { color:#fff; }
+.cw-locked { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:6px; border:1px solid rgba(34,197,94,0.35); background:rgba(34,197,94,0.07); color:#22c55e; font-size:11px; font-weight:700; cursor:default; }
+
 /* ══════════════════════════════════════
    MOBILE LAYOUT
 ══════════════════════════════════════ */
@@ -315,7 +329,18 @@ tbody td.muted { color: #64748b; font-size: 12px; }
   </div>
 </div>
 
-<!-- Mobile status dropdown (outside cards to avoid clipping) -->
+<!-- Closed Won Confirmation Modal -->
+<div class="cw-overlay" id="cwModal">
+  <div class="cw-modal">
+    <div class="cw-icon">🔒</div>
+    <div class="cw-title">Mark as Closed Won?</div>
+    <div class="cw-sub">This will lock the deal and notify the admin for commission tracking. Only the admin can undo this.</div>
+    <div class="cw-actions">
+      <button class="cw-cancel" onclick="cwCancel()">Cancel</button>
+      <button class="cw-confirm" onclick="cwConfirm()">Yes, Closed Won</button>
+    </div>
+  </div>
+</div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>
@@ -553,14 +578,16 @@ function deskRenderTable() {
       <td class="muted">${dm}</td>
       <td class="muted">${lead.Timeline||'—'}</td>
       <td class="muted">${lead['Credit Score']||'—'}</td>
-      <td><select class="status-select ${sc}" onchange="deskSaveStatus('${lead.id}',this)">
+      <td>${status==='Closed Won'
+        ? `<span class="cw-locked">🔒 Closed Won</span>`
+        : `<select class="status-select ${sc}" onchange="deskSaveStatus('${lead.id}',this)">
         <option value="New" ${status==='New'?'selected':''}>🔵 New</option>
         <option value="Contacted" ${status==='Contacted'?'selected':''}>📞 Contacted</option>
         <option value="Left Voicemail" ${status==='Left Voicemail'?'selected':''}>📬 Left Voicemail</option>
         <option value="Not Interested" ${status==='Not Interested'?'selected':''}>🚫 Not Interested</option>
-        <option value="Closed Won" ${status==='Closed Won'?'selected':''}>✅ Closed Won</option>
+        <option value="Closed Won">✅ Closed Won</option>
         <option value="Closed Lost" ${status==='Closed Lost'?'selected':''}>❌ Closed Lost</option>
-      </select></td>
+      </select>`}</td>
       <td><button class="notes-btn-desk ${hasNotes?'has-notes':''}" onclick="deskToggleNotes('${lead.id}')">${hasNotes?'📝 View Notes':'+ Add Note'}</button></td>
       <td class="muted">${date}</td>
     </tr>
@@ -586,6 +613,11 @@ function deskToggleNotes(id) {
 
 async function deskSaveStatus(leadId, el) {
   const status = el.value;
+  if (status === 'Closed Won') {
+    el.value = allLeads.find(l=>l.id===leadId)?.['Status'] || 'New'; // reset dropdown visually
+    showClosedWonConfirm(leadId, false);
+    return;
+  }
   el.className = 'status-select status-'+status.toLowerCase().replace(/\s+/g,'-').replace('left-voicemail','voicemail').replace('closed-won','won').replace('closed-lost','lost');
   await saveStatusToAirtable(leadId, status);
 }
@@ -665,13 +697,15 @@ function mobRenderCards() {
         </div>
         <div class="mob-actions">
           <div class="mob-status-wrap">
-            <button class="mob-status-trigger" style="border:1px solid ${ss.border};background:${ss.bg}" onclick="mobToggleDropdown('${lead.id}',event)">
+            ${status==='Closed Won'
+              ? `<span class="cw-locked" style="font-size:12px;padding:7px 12px;">🔒 Closed Won</span>`
+              : `<button class="mob-status-trigger" style="border:1px solid ${ss.border};background:${ss.bg}" onclick="mobToggleDropdown('${lead.id}',event)">
               <span style="color:${ss.color}">${statusLabel}</span>
               <span style="font-size:9px;color:${ss.color};opacity:0.7">▾</span>
             </button>
             <div class="mob-status-menu ${mobActiveDropdown===lead.id?'open':''}" id="mddmenu-${lead.id}">
               ${STATUS_OPTIONS.map(o=>{const os=STATUS_STYLE[o.value];return `<button class="mob-status-opt ${o.value===(lead['Status']||'New')?'sel':''}" style="color:${os.color}" onclick="mobSelectStatus('${lead.id}','${o.value}')">${o.label}</button>`;}).join('')}
-            </div>
+            </div>`}
           </div>
           <button class="mob-notes-btn" style="border:1px solid ${notes?'rgba(247,183,49,0.28)':'rgba(255,255,255,0.07)'};background:${notes?'rgba(247,183,49,0.07)':'rgba(255,255,255,0.03)'};color:${notes?'#F7B731':'#3d5166'}" onclick="mobToggleNotes('${lead.id}')">
             ${notes?'📝 Notes':'+ Note'}
@@ -719,6 +753,11 @@ function mobToggleDropdown(id, e) {
 
 async function mobSelectStatus(id, val) {
   mobActiveDropdown = null;
+  if (val === 'Closed Won') {
+    mobRenderCards(); // close dropdown first
+    showClosedWonConfirm(id, true);
+    return;
+  }
   await saveStatusToAirtable(id, val);
   mobRenderCards();
 }
@@ -726,6 +765,29 @@ async function mobSelectStatus(id, val) {
 document.addEventListener('click', () => {
   if (mobActiveDropdown) { mobActiveDropdown = null; mobRenderCards(); }
 });
+
+// ── CLOSED WON CONFIRMATION ────────────────────────
+let _cwPendingId = null;
+let _cwPendingMob = false;
+
+function showClosedWonConfirm(leadId, isMob) {
+  _cwPendingId  = leadId;
+  _cwPendingMob = isMob;
+  document.getElementById('cwModal').classList.add('open');
+}
+
+async function cwConfirm() {
+  document.getElementById('cwModal').classList.remove('open');
+  if (!_cwPendingId) return;
+  await saveStatusToAirtable(_cwPendingId, 'Closed Won');
+  if (_cwPendingMob) mobRenderCards(); else deskRenderTable();
+  _cwPendingId = null;
+}
+
+function cwCancel() {
+  document.getElementById('cwModal').classList.remove('open');
+  _cwPendingId = null;
+}
 </script>
 </body>
 </html>
