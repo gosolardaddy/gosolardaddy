@@ -283,7 +283,7 @@ tbody td.muted { color: #64748b; font-size: 12px; }
         <tr>
           <th>Rank</th><th>Name</th><th>Score</th><th>Phone</th><th>Email</th>
           <th>Address</th><th>Bill</th><th>Roof Age</th><th>Decision Maker</th>
-          <th>Timeline</th><th>Status</th><th>Notes</th><th>Submitted</th>
+          <th>Timeline</th><th>Credit Score</th><th>Status</th><th>Notes</th><th>Submitted</th>
         </tr>
       </thead>
       <tbody id="deskBody"></tbody>
@@ -552,6 +552,7 @@ function deskRenderTable() {
       <td class="muted">${lead['Roof Age']||'—'}</td>
       <td class="muted">${dm}</td>
       <td class="muted">${lead.Timeline||'—'}</td>
+      <td class="muted">${lead['Credit Score']||'—'}</td>
       <td><select class="status-select ${sc}" onchange="deskSaveStatus('${lead.id}',this)">
         <option value="New" ${status==='New'?'selected':''}>🔵 New</option>
         <option value="Contacted" ${status==='Contacted'?'selected':''}>📞 Contacted</option>
@@ -564,7 +565,7 @@ function deskRenderTable() {
       <td class="muted">${date}</td>
     </tr>
     <tr id="dnotes-${lead.id}" style="display:none;" class="notes-row">
-      <td colspan="10"></td>
+      <td colspan="11"></td>
       <td colspan="3"><div class="notes-panel-desk">
         <div style="flex:1">
           <textarea class="notes-textarea-desk" id="dta-${lead.id}" placeholder="Add notes…">${notes}</textarea>
@@ -660,6 +661,7 @@ function mobRenderCards() {
           <div class="mob-info-cell">${lead['Monthly Bill']||'—'}</div>
           <div class="mob-info-cell">${lead['Roof Age']||'—'}</div>
           <div class="mob-info-cell">${lead.Timeline||'—'}</div>
+          <div class="mob-info-cell">${lead['Credit Score']||'—'}</div>
         </div>
         <div class="mob-actions">
           <div class="mob-status-wrap">
