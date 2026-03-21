@@ -554,7 +554,6 @@ function calcScore() {
 
 function calcRank(score, ownsHome) {
   if (ownsHome !== 'Yes — I own my home') return 'Warm';
-  if (score >= 85) return 'Boiling';
   if (score >= 60) return 'Hot';
   return 'Warm';
 }
