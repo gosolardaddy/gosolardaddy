@@ -496,7 +496,7 @@ async function saveNotesToAirtable(leadId, notes, savingEl) {
 // DESKTOP FUNCTIONS
 // ══════════════════════════════════════
 function deskUpdateStats() {
-  const hot = allLeads.filter(l=>l.Rank==='Hot').length;
+  const hot = allLeads.filter(l=>l.Rank==='Hot'||l.Rank==='Boiling').length;
   const warm = allLeads.filter(l=>l.Rank==='Warm').length;
   const neutral = allLeads.filter(l=>!l.Rank||l.Rank==='Neutral').length;
   document.getElementById('deskStats').innerHTML = `
@@ -524,14 +524,14 @@ function setFilter(f) {
 }
 
 function deskRenderTable() {
-  const filtered = currentFilter==='All' ? allLeads : allLeads.filter(l=>(l.Rank||'Neutral')===currentFilter);
+  const filtered = currentFilter==='All' ? allLeads : allLeads.filter(l=>(l.Rank==='Boiling'?'Hot':l.Rank||'Neutral')===currentFilter);
   document.getElementById('deskFilterCount').textContent = `${filtered.length} lead${filtered.length!==1?'s':''}`;
   document.getElementById('deskLoading').style.display = 'none';
   if (!filtered.length) { document.getElementById('deskTable').style.display='none'; document.getElementById('deskEmpty').style.display='block'; return; }
   document.getElementById('deskTable').style.display = 'table';
   document.getElementById('deskEmpty').style.display = 'none';
   document.getElementById('deskBody').innerHTML = filtered.map(lead => {
-    const rank = lead.Rank||'Neutral';
+    const rank = (lead.Rank==='Boiling'?'Hot':lead.Rank)||'Neutral';
     const score = lead.Score||0;
     const name = [lead['First Name'],lead['Last Name']].filter(Boolean).join(' ')||'—';
     const date = lead.createdTime ? new Date(lead.createdTime).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
@@ -608,7 +608,7 @@ function deskRefresh() {
 // MOBILE FUNCTIONS
 // ══════════════════════════════════════
 function mobRenderStats() {
-  const counts = { Hot:allLeads.filter(l=>l.Rank==='Hot').length, Warm:allLeads.filter(l=>l.Rank==='Warm').length, Neutral:allLeads.filter(l=>!l.Rank||l.Rank==='Neutral').length };
+  const counts = { Hot:allLeads.filter(l=>l.Rank==='Hot'||l.Rank==='Boiling').length, Warm:allLeads.filter(l=>l.Rank==='Warm').length, Neutral:allLeads.filter(l=>!l.Rank||l.Rank==='Neutral').length };
   const pills = [
     { key:'All',     label:'Total',   val:allLeads.length,  color:'#94a3b8', dot:null,      activeBg:'rgba(255,255,255,0.09)', activeBorder:'rgba(255,255,255,0.2)',  bg:'rgba(255,255,255,0.04)', border:'rgba(255,255,255,0.08)' },
     { key:'Hot',     label:'Hot',     val:counts.Hot,       color:'#ef4444', dot:'#ef4444', activeBg:'rgba(239,68,68,0.15)',   activeBorder:'rgba(239,68,68,0.35)',   bg:'rgba(239,68,68,0.07)',   border:'rgba(239,68,68,0.16)'   },
@@ -628,7 +628,7 @@ function mobRenderStats() {
 function mobRenderCards() {
   const filtered = mobFilter==='All' ? allLeads : allLeads.filter(l=>(l.Rank||'Neutral')===mobFilter);
   document.getElementById('mobCards').innerHTML = filtered.map(lead => {
-    const rank = lead.Rank||'Neutral';
+    const rank = (lead.Rank==='Boiling'?'Hot':lead.Rank)||'Neutral';
     const rs = RANK_STYLE[rank]||RANK_STYLE.Neutral;
     const status = lead['Status']||'New';
     const ss = STATUS_STYLE[status]||STATUS_STYLE['new'];
