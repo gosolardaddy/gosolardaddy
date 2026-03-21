@@ -485,7 +485,7 @@ async function loadLeads() {
 // ── AIRTABLE SAVES ────────────────────────
 async function saveStatusToAirtable(leadId, status) {
   const fields = { Status: status };
-  if (status === 'closed won') {
+  if (status === 'Closed Won') {
     fields['Closed Date'] = new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     fields['Closed By'] = currentUser.name;
   }
@@ -500,7 +500,7 @@ async function saveStatusToAirtable(leadId, status) {
       return;
     }
     const lead = allLeads.find(l => l.id === leadId);
-    if (lead) { lead['Status'] = status; if (status === 'closed won') { lead['Closed Date']=fields['Closed Date']; lead['Closed By']=currentUser.name; } }
+    if (lead) { lead['Status'] = status; if (status === 'Closed Won') { lead['Closed Date']=fields['Closed Date']; lead['Closed By']=currentUser.name; } }
   } catch(e) {
     alert('❌ Network error saving status: ' + e.message);
   }
