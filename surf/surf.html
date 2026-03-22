@@ -66,30 +66,40 @@ function addScore(name, s) {
 }
 
 // Name input overlay
+const nameWrap = document.createElement('div');
+nameWrap.style.cssText = 'position:fixed;display:none;z-index:999;flex-direction:column;align-items:center;gap:10px;';
 const nameInput = document.createElement('input');
 nameInput.type = 'text';
 nameInput.maxLength = 12;
 nameInput.placeholder = 'ENTER NAME';
-nameInput.style.cssText = 'position:fixed;display:none;z-index:999;font-family:"Press Start 2P",monospace;font-size:13px;background:#000a00;color:#00ff44;border:2px solid #00ff44;padding:10px 14px;text-align:center;outline:none;text-transform:uppercase;width:220px;letter-spacing:2px';
-document.body.appendChild(nameInput);
+nameInput.style.cssText = 'font-family:"Press Start 2P",monospace;font-size:13px;background:#000a00;color:#00ff44;border:2px solid #00ff44;padding:10px 14px;text-align:center;outline:none;text-transform:uppercase;width:220px;letter-spacing:2px';
+const nameBtn = document.createElement('button');
+nameBtn.textContent = 'SUBMIT';
+nameBtn.style.cssText = 'font-family:"Press Start 2P",monospace;font-size:12px;background:#00ff44;color:#000;border:none;padding:10px 20px;cursor:pointer;width:220px;';
+nameWrap.appendChild(nameInput);
+nameWrap.appendChild(nameBtn);
+document.body.appendChild(nameWrap);
+
+function submitName() {
+  if (!nameInput.value.trim()) return;
+  addScore(nameInput.value.trim(), score);
+  nameWrap.style.display = 'none';
+  state = 'dead';
+}
 
 function positionNameInput() {
   const r = canvas.getBoundingClientRect();
-  nameInput.style.left = (r.left + r.width/2 - 110) + 'px';
-  nameInput.style.top  = (r.top  + r.height * 0.58) + 'px';
+  nameWrap.style.left = (r.left + r.width/2 - 110) + 'px';
+  nameWrap.style.top  = (r.top  + r.height * 0.52) + 'px';
 }
 window.addEventListener('resize', positionNameInput);
 
 nameInput.addEventListener('keydown', e => {
   e.stopPropagation();
-  if (e.key === 'Enter' && nameInput.value.trim()) {
-    addScore(nameInput.value.trim(), score);
-    nameInput.style.display = 'none';
-    state = 'dead';
-    e.preventDefault();
-  }
+  if (e.key === 'Enter') { submitName(); e.preventDefault(); }
 });
 nameInput.addEventListener('keyup', e => e.stopPropagation());
+nameBtn.addEventListener('click', submitName);
 
 // ---- AUDIO ----
 let audioCtx = null;
@@ -448,7 +458,7 @@ function startGame() {
   woahCooldown = 0;
   sharkPulseCooldown = 0;
   wasScared = false;
-  nameInput.style.display = 'none';
+  nameWrap.style.display = 'none';
   stopBGM();
   startBGM();
 }
@@ -1470,7 +1480,7 @@ function update() {
       if (score > 0 && qualifies(score)) {
         state = 'nameentry';
         positionNameInput();
-        nameInput.style.display = 'block';
+        nameWrap.style.display = 'flex';
         nameInput.value = '';
         setTimeout(() => nameInput.focus(), 80);
       } else {
