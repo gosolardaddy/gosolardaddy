@@ -2,19 +2,19 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Radical Surfrider</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; background: #000; overflow: hidden; }
     body {
-      background: #000;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      overflow: hidden;
+      height: 100%;
+      height: -webkit-fill-available;
     }
     canvas {
       display: block;
@@ -39,12 +39,15 @@ const GW = 360;
 const GH = 640;
 
 function resize() {
-  const scale = Math.min(window.innerWidth / GW, window.innerHeight / GH);
+  const vw = (window.visualViewport ? window.visualViewport.width  : window.innerWidth);
+  const vh = (window.visualViewport ? window.visualViewport.height : window.innerHeight);
+  const scale = Math.min(vw / GW, vh / GH);
   canvas.width = GW;
   canvas.height = GH;
-  canvas.style.width = GW * scale + 'px';
+  canvas.style.width  = GW * scale + 'px';
   canvas.style.height = GH * scale + 'px';
 }
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 resize();
 window.addEventListener('resize', resize);
 
@@ -133,12 +136,14 @@ function initAudio() {
     paddleGainNode.gain.value = 0;
     pSrc.connect(pFilt); pFilt.connect(paddleGainNode); paddleGainNode.connect(masterGain);
     pSrc.start();
-    // Load all MP3s into AudioContext buffers (works on iOS)
-    loadBuffer('woah.mp3',    d => woahBuffer    = d);
-    loadBuffer('crash.mp3',   d => crashBuffer   = d);
-    loadBuffer('cheer.mp3',   d => cheerBuffer   = d);
-    loadBuffer('levelup.mp3', d => levelupBuffer = d);
-    loadBuffer('seagull.mp3', d => seagullBuffer = d);
+    // iOS requires explicit resume, then load MP3 buffers once running
+    audioCtx.resume().then(() => {
+      loadBuffer('woah.mp3',    d => woahBuffer    = d);
+      loadBuffer('crash.mp3',   d => crashBuffer   = d);
+      loadBuffer('cheer.mp3',   d => cheerBuffer   = d);
+      loadBuffer('levelup.mp3', d => levelupBuffer = d);
+      loadBuffer('seagull.mp3', d => seagullBuffer = d);
+    });
   } catch(e) {}
 }
 
