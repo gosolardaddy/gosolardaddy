@@ -328,6 +328,8 @@ let spawnTimer = 0;
 let spawnInterval = 100;
 let shakeFrames = 0;
 let cheerFrames = 0;
+let spinFrames = 0;
+let bonusWaves = [];
 let lastCheerMilestone = 0;
 let lastBigCheer = 0;
 let cheerPopups = [];
@@ -469,8 +471,10 @@ function startGame() {
   surfer.targetX = GW / 2;
   obstacles = [];
   particles = [];
+  bonusWaves = [];
   pendingSpawns = [];
   cheerFrames = 0;
+  spinFrames = 0;
   lastCheerMilestone = 0;
   lastBigCheer = 0;
   cheerPopups = [];
@@ -1347,6 +1351,7 @@ function spawnFormationObstacle(xFrac, type) {
 }
 
 function spawnObstacle() {
+  if (Math.random() < 0.15) { spawnBonusWave(); return; }
   const roll = Math.random();
   let type, w, h;
   if (roll < 0.45) { type = 'shark'; w = 56; h = 32; }
@@ -1376,6 +1381,46 @@ function spawnParticles(x, y) {
       size: 2 + Math.random() * 5
     });
   }
+}
+
+function spawnBonusWave() {
+  const w = 64, h = 40;
+  bonusWaves.push({
+    x: 16 + Math.random() * (GW - 32 - w),
+    y: -h - 20, w, h,
+    spd: 0.7 + Math.random() * 0.4,
+    phase: Math.random() * Math.PI * 2
+  });
+}
+
+function drawBonusWave(o) {
+  const x = Math.floor(o.x);
+  const y = Math.floor(o.y);
+  const foam = Math.sin(frame * 0.18 + o.phase) > 0 ? '#ffffff' : '#ddf4ff';
+  // Wave body — rolling curl shape
+  const body = [
+    [0,20,64,20,'#0077cc'],
+    [4,14,56,8, '#0099ee'],
+    [8,8, 48,8, '#22aaff'],
+    [12,4,36,6, '#55ccff'],
+    // curl lip
+    [10,2,18,4, '#88ddff'],
+    [28,0,14,4, '#aaeeff'],
+    // foam top
+    [8,0, 10,3, foam],
+    [22,0,8, 2, foam],
+    [34,0,10,3, foam],
+    // white water base
+    [0,36,16,4, '#aaddff'],
+    [20,34,10,4,'#aaddff'],
+    [36,36,14,4,'#aaddff'],
+  ];
+  body.forEach(([rx,ry,rw,rh,c]) => px(x+rx, y+ry, rw, rh, c));
+  // Bonus star indicator above wave
+  ctx.fillStyle = '#ffff00';
+  ctx.font = '8px "Press Start 2P"';
+  ctx.textAlign = 'center';
+  ctx.fillText('+100', x + 32, y - 4);
 }
 
 // ---- COLLISION ----
@@ -1518,6 +1563,20 @@ function update(dt) {
     return obs.y + obs.h < BEACH_Y - 30;
   });
 
+  // ---- BONUS WAVES ----
+  bonusWaves = bonusWaves.filter(w => {
+    w.y += w.spd * speed * 0.55 * dt;
+    if (collides(surfer, w)) {
+      score += 100;
+      spinFrames = 50;
+      cheerFrames = 80;
+      sfxCheer();
+      return false;
+    }
+    return w.y + w.h < BEACH_Y - 30;
+  });
+  if (spinFrames > 0) spinFrames -= dt;
+
   // ---- PARTICLES ----
   particles = particles.filter(p => {
     p.x  += p.vx * dt;
@@ -1596,14 +1655,26 @@ function draw() {
     else                          drawJellyfish(obs);
   });
 
-  // Surfer (with bob) — scared face when obstacle nearby
+  // Bonus waves
+  bonusWaves.forEach(w => drawBonusWave(w));
+
+  // Surfer (with bob) — scared face when obstacle nearby, spin on wave hit
   const bob = state === 'playing' ? Math.sin(frame * 0.09) * 3 : 0;
-  const scared = obstacles.some(o => {
+  const scared = spinFrames <= 0 && obstacles.some(o => {
     const dx = Math.abs(surfer.x - (o.x + o.w / 2));
     const dy = (o.y + o.h) - surfer.y;
     return dx < 60 && dy > -20 && dy < 80;
   });
-  drawSurfer(surfer.x, surfer.y + bob, scared);
+  if (spinFrames > 0) {
+    const spinAngle = ((50 - spinFrames) / 50) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(surfer.x, surfer.y + bob);
+    ctx.rotate(spinAngle);
+    drawSurfer(0, 0, false);
+    ctx.restore();
+  } else {
+    drawSurfer(surfer.x, surfer.y + bob, scared);
+  }
 
   // Particles
   particles.forEach(p => {
