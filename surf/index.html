@@ -1510,8 +1510,9 @@ function update(dt) {
     lastCheerMilestone = popMilestone;
     cheerPopups.push({ x: GW / 2, y: BEACH_Y - 10, text: popMilestone * 50 + '!!', life: 80 });
   }
-  // Crowd cheer animation + sound every 200 points
-  const bigCheer = Math.floor(score / 200);
+  // Crowd cheer — interval scales with speed so cadence stays constant
+  const cheerInterval = Math.round(200 * speed / 2);
+  const bigCheer = Math.floor(score / cheerInterval);
   if (bigCheer > lastBigCheer) {
     lastBigCheer = bigCheer;
     cheerFrames = 120;
