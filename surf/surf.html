@@ -97,6 +97,21 @@ let paddleGainNode = null;
 let woahCooldown = 0;
 let sharkPulseCooldown = 0;
 let wasScared = false;
+let woahBuffer = null, crashBuffer = null, cheerBuffer = null, levelupBuffer = null, seagullBuffer = null;
+
+function loadBuffer(url, target) {
+  fetch(url).then(r => r.arrayBuffer()).then(b => audioCtx.decodeAudioData(b)).then(decoded => { target(decoded); }).catch(() => {});
+}
+
+function playBuffer(buffer, volume) {
+  if (!audioCtx || !buffer) return;
+  const src = audioCtx.createBufferSource();
+  const g = audioCtx.createGain();
+  src.buffer = buffer;
+  g.gain.value = volume !== undefined ? volume : 1.0;
+  src.connect(g); g.connect(masterGain);
+  src.start();
+}
 
 function initAudio() {
   if (audioCtx) return;
@@ -118,6 +133,12 @@ function initAudio() {
     paddleGainNode.gain.value = 0;
     pSrc.connect(pFilt); pFilt.connect(paddleGainNode); paddleGainNode.connect(masterGain);
     pSrc.start();
+    // Load all MP3s into AudioContext buffers (works on iOS)
+    loadBuffer('woah.mp3',    d => woahBuffer    = d);
+    loadBuffer('crash.mp3',   d => crashBuffer   = d);
+    loadBuffer('cheer.mp3',   d => cheerBuffer   = d);
+    loadBuffer('levelup.mp3', d => levelupBuffer = d);
+    loadBuffer('seagull.mp3', d => seagullBuffer = d);
   } catch(e) {}
 }
 
@@ -133,24 +154,9 @@ function note(freq, t, dur, vol, type='square') {
   osc.start(t); osc.stop(t + dur);
 }
 
-function sfxWipeout() {
-  const el = document.getElementById('crashSfx');
-  if (!el) return;
-  el.currentTime = 0;
-  el.play().catch(() => {});
-}
-
-function sfxCheer() {
-  const el = new Audio('cheer.mp3');
-  el.volume = 0.18;
-  el.play().catch(() => {});
-}
-
-function sfxLevelUp() {
-  const el = new Audio('levelup.mp3');
-  el.volume = 0.18;
-  el.play().catch(() => {});
-}
+function sfxWipeout()  { playBuffer(crashBuffer); }
+function sfxCheer()    { playBuffer(cheerBuffer,   0.18); }
+function sfxLevelUp()  { playBuffer(levelupBuffer, 0.18); }
 
 function sfxSharkPulse() {
   if (!audioCtx) return;
@@ -159,12 +165,7 @@ function sfxSharkPulse() {
   note(70, t+0.24, 0.16, 0.28, 'sine');
 }
 
-function sfxWoahh() {
-  const el = document.getElementById('woahSfx');
-  if (!el) return;
-  el.currentTime = 0;
-  el.play().catch(() => {});
-}
+function sfxWoahh() { playBuffer(woahBuffer); }
 
 let seagullInterval = null;
 function startBGM() {
@@ -178,8 +179,7 @@ function startBGM() {
   if (seagullInterval) clearInterval(seagullInterval);
   seagullInterval = setInterval(() => {
     if (state !== 'playing') return;
-    const el = document.getElementById('seagullSfx');
-    if (el) { el.currentTime = 0; el.play().catch(() => {}); }
+    playBuffer(seagullBuffer);
   }, 10000);
 }
 function stopBGM() {
