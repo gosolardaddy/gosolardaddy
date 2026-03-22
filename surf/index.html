@@ -124,7 +124,7 @@ let audioUnlocked = false;
 
 // All sfx as <audio> elements — unlocked on first user tap for iOS
 const SFX = {
-  woah:    { src: 'woah.mp3',    vol: 1.0  },
+  woah:    { src: 'woah.mp3',    vol: 1.0  }, // fallback only
   crash:   { src: 'crash.mp3',   vol: 1.0  },
   cheer:   { src: 'cheer.mp3',   vol: 0.18 },
   levelup: { src: 'levelup.mp3', vol: 0.18 },
@@ -155,6 +155,7 @@ function playSfx(key) {
   cfg.el.play().catch(() => {});
 }
 
+let woahBuffer = null;
 function initAudio() {
   if (audioCtx) return;
   unlockAudio();
@@ -177,6 +178,10 @@ function initAudio() {
     paddleGainNode.gain.value = 0;
     pSrc.connect(pFilt); pFilt.connect(paddleGainNode); paddleGainNode.connect(masterGain);
     pSrc.start();
+    // Load woah via Web Audio for low latency + amplification
+    audioCtx.resume().then(() => {
+      fetch('woah.mp3').then(r => r.arrayBuffer()).then(b => audioCtx.decodeAudioData(b)).then(d => { woahBuffer = d; }).catch(() => {});
+    });
   } catch(e) {}
 }
 
@@ -195,7 +200,20 @@ function note(freq, t, dur, vol, type='square') {
 function sfxWipeout()    { playSfx('crash'); }
 function sfxCheer()      { playSfx('cheer'); }
 function sfxLevelUp()    { playSfx('levelup'); }
-function sfxWoahh()      { playSfx('woah'); }
+function sfxWoahh() {
+  if (audioCtx && woahBuffer) {
+    // Web Audio — zero latency, can amplify above 1.0
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    src.buffer = woahBuffer;
+    g.gain.value = 2.5;
+    src.connect(g); g.connect(masterGain);
+    src.start();
+  } else {
+    playSfx('woah'); // fallback audio element
+  }
+}
 function sfxSharkPulse() {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
@@ -1372,16 +1390,16 @@ function collides(surfer, obs) {
 }
 
 // ---- UPDATE ----
-function update() {
-  frame++;
+function update(dt) {
+  frame += dt;
 
   if (state !== 'playing') return;
 
   const lCfg = LEVELS[level];
 
   // ---- LEVEL TIMER & PROGRESSION ----
-  levelTimer++;
-  if (levelBannerTimer > 0) levelBannerTimer--;
+  levelTimer += dt;
+  if (levelBannerTimer > 0) levelBannerTimer -= dt;
 
   // Speed from level config, ramping across level duration
   const lvlProg = Math.min(levelTimer / lCfg.duration, 1);
@@ -1411,19 +1429,19 @@ function update() {
 
   // ---- LIGHTNING (storm levels) ----
   if (lCfg.lightning) {
-    lightningTimer++;
+    lightningTimer += dt;
     if (lightningTimer > 180 + Math.floor(Math.random() * 360)) {
       lightningTimer = 0;
       lightningFlash = 8;
     }
-    if (lightningFlash > 0) lightningFlash--;
+    if (lightningFlash > 0) lightningFlash -= dt;
   } else {
     lightningFlash = 0;
   }
 
   // ---- WAVE LINES ----
   waveLines.forEach(wl => {
-    wl.y += wl.spd * (speed * 0.45);
+    wl.y += wl.spd * (speed * 0.45) * dt;
     if (wl.y > GH) {
       wl.y = -8;
       wl.x = Math.random() * GW;
@@ -1436,10 +1454,10 @@ function update() {
   if (keys['ArrowLeft']  || keys['a']) surfer.targetX -= 9;
   if (keys['ArrowRight'] || keys['d']) surfer.targetX += 9;
   surfer.targetX = Math.max(surfer.w / 2 + 4, Math.min(GW - surfer.w / 2 - 4, surfer.targetX));
-  surfer.x += (surfer.targetX - surfer.x) * 0.14;
+  surfer.x += (surfer.targetX - surfer.x) * 0.14 * dt;
 
   // ---- SCORE & CHEERS ----
-  score += speed * 0.12;
+  score += speed * 0.12 * dt;
   if (score > hiScore) hiScore = score;
   // Score popup every 50 points
   const popMilestone = Math.floor(score / 50);
@@ -1455,10 +1473,10 @@ function update() {
     sfxCheer();
   }
   if (cheerFrames > 0) cheerFrames--;
-  cheerPopups = cheerPopups.filter(p => { p.y -= 0.8; p.life--; return p.life > 0; });
+  cheerPopups = cheerPopups.filter(p => { p.y -= 0.8 * dt; p.life -= dt; return p.life > 0; });
 
   // ---- FORMATION SPAWNING ----
-  formationTimer++;
+  formationTimer += dt;
   if (formationTimer >= lCfg.formInterval) {
     formationTimer = 0;
     const pat = lCfg.patterns[Math.floor(Math.random() * lCfg.patterns.length)];
@@ -1470,7 +1488,7 @@ function update() {
   });
 
   // Occasional random fill between formations
-  spawnTimer++;
+  spawnTimer += dt;
   const randInterval = Math.max(90, lCfg.formInterval * 0.7);
   if (spawnTimer >= randInterval) {
     spawnTimer = 0;
@@ -1479,7 +1497,7 @@ function update() {
 
   // ---- OBSTACLES ----
   obstacles = obstacles.filter(obs => {
-    obs.y += obs.spd * speed * 0.55;
+    obs.y += obs.spd * speed * 0.55 * dt;
     if (collides(surfer, obs)) {
       spawnParticles(surfer.x, surfer.y);
       shakeFrames = 18;
@@ -1502,15 +1520,15 @@ function update() {
 
   // ---- PARTICLES ----
   particles = particles.filter(p => {
-    p.x  += p.vx;
-    p.y  += p.vy;
-    p.vy += 0.18;
-    p.vx *= 0.96;
-    p.life--;
+    p.x  += p.vx * dt;
+    p.y  += p.vy * dt;
+    p.vy += 0.18 * dt;
+    p.vx *= Math.pow(0.96, dt);
+    p.life -= dt;
     return p.life > 0;
   });
 
-  if (shakeFrames > 0) shakeFrames--;
+  if (shakeFrames > 0) shakeFrames -= dt;
 
   // ---- AUDIO TRIGGERS ----
   // Woahh — fires once when surfer first gets scared, 3-sec cooldown
@@ -1521,7 +1539,7 @@ function update() {
   });
   if (nowScared && !wasScared && woahCooldown <= 0) { sfxWoahh(); woahCooldown = 200; }
   wasScared = nowScared;
-  if (woahCooldown > 0) woahCooldown--;
+  if (woahCooldown > 0) woahCooldown -= dt;
 
   // Shark proximity pulse
   const sharkClose = obstacles.some(o => {
@@ -1531,7 +1549,7 @@ function update() {
     return dx < 110 && dy > -30 && dy < 160;
   });
   if (sharkClose && sharkPulseCooldown <= 0) { sfxSharkPulse(); sharkPulseCooldown = 65; }
-  if (sharkPulseCooldown > 0) sharkPulseCooldown--;
+  if (sharkPulseCooldown > 0) sharkPulseCooldown -= dt;
 
   // Paddle whoosh — swells when moving, fades when still
   if (paddleGainNode && audioCtx) {
@@ -1615,13 +1633,16 @@ function draw() {
   if (state === 'playing') drawLevelBanner();
 }
 
-function loop() {
-  update();
+let lastTimestamp = 0;
+function loop(timestamp) {
+  const dt = lastTimestamp ? Math.min((timestamp - lastTimestamp) / (1000 / 60), 3) : 1;
+  lastTimestamp = timestamp;
+  update(dt);
   draw();
   requestAnimationFrame(loop);
 }
 
-loop();
+requestAnimationFrame(loop);
 </script>
 </body>
 </html>
