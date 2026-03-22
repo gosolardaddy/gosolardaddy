@@ -51,19 +51,28 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', resi
 resize();
 window.addEventListener('resize', resize);
 
-// ---- LEADERBOARD ----
-function loadLB() {
-  try { return JSON.parse(localStorage.getItem('rsLB') || '[]'); } catch(e) { return []; }
+// ---- LEADERBOARD (Firebase Realtime Database) ----
+const DB_URL = 'https://radical-surfrider-default-rtdb.firebaseio.com/leaderboard.json';
+let lbCache = [];
+
+function fetchLB() {
+  return fetch(DB_URL).then(r => r.json()).then(data => {
+    lbCache = Array.isArray(data) ? data : [];
+  }).catch(() => {});
 }
-function saveLB(lb) { localStorage.setItem('rsLB', JSON.stringify(lb)); }
-function qualifies(s) { const lb = loadLB(); return lb.length < 5 || s > (lb[lb.length-1] ? lb[lb.length-1].score : 0); }
+function saveLB(lb) {
+  lbCache = lb;
+  fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lb) }).catch(() => {});
+}
+function qualifies(s) { return lbCache.length < 5 || s > (lbCache[lbCache.length - 1]?.score || 0); }
 function addScore(name, s) {
-  const lb = loadLB();
+  const lb = [...lbCache];
   lb.push({ name: name.toUpperCase().substring(0, 12), score: Math.floor(s) });
   lb.sort((a,b) => b.score - a.score);
   if (lb.length > 5) lb.length = 5;
   saveLB(lb);
 }
+fetchLB(); // load on page start
 
 // Name input overlay
 const nameWrap = document.createElement('div');
@@ -85,6 +94,7 @@ function submitName() {
   addScore(nameInput.value.trim(), score);
   nameWrap.style.display = 'none';
   state = 'dead';
+  fetchLB(); // refresh cache from Firebase after saving
 }
 
 function positionNameInput() {
@@ -1083,7 +1093,7 @@ function drawUI() {
 }
 
 function drawLeaderboard(centerX, startY) {
-  const lb = loadLB();
+  const lb = lbCache;
   ctx.textAlign = 'center';
   ctx.fillStyle = '#ffdd00';
   ctx.font = "8px 'Press Start 2P', monospace";
