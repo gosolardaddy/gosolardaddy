@@ -100,36 +100,50 @@ let paddleGainNode = null;
 let woahCooldown = 0;
 let sharkPulseCooldown = 0;
 let wasScared = false;
-let woahBuffer = null, crashBuffer = null, cheerBuffer = null, levelupBuffer = null, seagullBuffer = null;
+let audioUnlocked = false;
 
-function loadBuffer(url, target) {
-  fetch(url).then(r => r.arrayBuffer()).then(b => audioCtx.decodeAudioData(b)).then(decoded => { target(decoded); }).catch(() => {});
+// All sfx as <audio> elements — unlocked on first user tap for iOS
+const SFX = {
+  woah:    { src: 'woah.mp3',    vol: 1.0  },
+  crash:   { src: 'crash.mp3',   vol: 1.0  },
+  cheer:   { src: 'cheer.mp3',   vol: 0.18 },
+  levelup: { src: 'levelup.mp3', vol: 0.18 },
+  seagull: { src: 'seagull.mp3', vol: 1.0  },
+};
+// Pre-create elements
+Object.entries(SFX).forEach(([key, cfg]) => {
+  const el = document.createElement('audio');
+  el.src = cfg.src;
+  el.preload = 'auto';
+  el.volume = cfg.vol;
+  cfg.el = el;
+});
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  // Play+pause every element during user gesture to unlock iOS
+  Object.values(SFX).forEach(cfg => {
+    cfg.el.play().then(() => { cfg.el.pause(); cfg.el.currentTime = 0; }).catch(() => {});
+  });
 }
 
-function playBuffer(buffer, volume) {
-  if (!audioCtx || !buffer) return;
-  const doPlay = () => {
-    const src = audioCtx.createBufferSource();
-    const g = audioCtx.createGain();
-    src.buffer = buffer;
-    g.gain.value = volume !== undefined ? volume : 1.0;
-    src.connect(g); g.connect(masterGain);
-    src.start();
-  };
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(doPlay);
-  } else {
-    doPlay();
-  }
+function playSfx(key) {
+  const cfg = SFX[key];
+  if (!cfg) return;
+  cfg.el.currentTime = 0;
+  cfg.el.play().catch(() => {});
 }
 
 function initAudio() {
   if (audioCtx) return;
+  unlockAudio();
   try {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.6;
     masterGain.connect(audioCtx.destination);
+    audioCtx.resume();
     // Paddle — looping filtered noise, gain controlled per frame
     const bufSize = audioCtx.sampleRate * 3;
     const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
@@ -143,13 +157,6 @@ function initAudio() {
     paddleGainNode.gain.value = 0;
     pSrc.connect(pFilt); pFilt.connect(paddleGainNode); paddleGainNode.connect(masterGain);
     pSrc.start();
-    // Load MP3 buffers — resume context first for iOS
-    audioCtx.resume();
-    loadBuffer('woah.mp3',    d => woahBuffer    = d);
-    loadBuffer('crash.mp3',   d => crashBuffer   = d);
-    loadBuffer('cheer.mp3',   d => cheerBuffer   = d);
-    loadBuffer('levelup.mp3', d => levelupBuffer = d);
-    loadBuffer('seagull.mp3', d => seagullBuffer = d);
   } catch(e) {}
 }
 
@@ -165,18 +172,16 @@ function note(freq, t, dur, vol, type='square') {
   osc.start(t); osc.stop(t + dur);
 }
 
-function sfxWipeout()  { playBuffer(crashBuffer); }
-function sfxCheer()    { playBuffer(cheerBuffer,   0.18); }
-function sfxLevelUp()  { playBuffer(levelupBuffer, 0.18); }
-
+function sfxWipeout()    { playSfx('crash'); }
+function sfxCheer()      { playSfx('cheer'); }
+function sfxLevelUp()    { playSfx('levelup'); }
+function sfxWoahh()      { playSfx('woah'); }
 function sfxSharkPulse() {
   if (!audioCtx) return;
   const t = audioCtx.currentTime;
   note(55, t,      0.22, 0.38, 'sine');
   note(70, t+0.24, 0.16, 0.28, 'sine');
 }
-
-function sfxWoahh() { playBuffer(woahBuffer); }
 
 let seagullInterval = null;
 function startBGM() {
@@ -190,7 +195,7 @@ function startBGM() {
   if (seagullInterval) clearInterval(seagullInterval);
   seagullInterval = setInterval(() => {
     if (state !== 'playing') return;
-    playBuffer(seagullBuffer);
+    playSfx('seagull');
   }, 10000);
 }
 function stopBGM() {
