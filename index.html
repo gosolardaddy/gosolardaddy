@@ -565,9 +565,15 @@ function selectOption(el) {
   el.classList.add('selected');
   answers[`q${q}`] = el.dataset.val;
   document.getElementById(`btn${q}`).disabled = false;
+  if (q === '1' && !window._quizStarted) {
+    window._quizStarted = true;
+    fbq('trackCustom', 'QuizStarted');
+  }
 }
 
 function nextStep(step) {
+  const completedStep = step - 1;
+  fbq('trackCustom', 'QuizStep', { content_name: 'Step ' + completedStep + ' Complete', step: completedStep });
   document.querySelector('.q-step.active').classList.remove('active');
   document.getElementById(`q${step}`).classList.add('active');
   document.getElementById('progressFill').style.width = progressMap[step] + '%';
@@ -626,8 +632,8 @@ async function submitForm() {
   }
 
   try {
-    // Send to Airtable
-    await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
+    // Send to Airtable — check response for errors
+    const atRes = await fetch(`https://api.airtable.com/v0/${AIRTABLE_BASE}/${AIRTABLE_TABLE}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${AIRTABLE_TOKEN}`,
@@ -653,9 +659,16 @@ async function submitForm() {
         }
       })
     });
+    if (!atRes.ok) {
+      const atErr = await atRes.json().catch(() => ({}));
+      throw new Error('Airtable error ' + atRes.status + ': ' + (atErr.error?.message || JSON.stringify(atErr)));
+    }
 
-    // Also send email notification to you
-    await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
+    // Fire Meta Pixel Lead event
+    fbq('track', 'Lead');
+
+    // Send email notification — failure here does NOT block success
+    emailjs.send(SERVICE_ID, TEMPLATE_ID, {
       first_name:     firstName,
       last_name:      document.getElementById('lastName').value.trim(),
       phone, email,
@@ -669,17 +682,16 @@ async function submitForm() {
       score:          score,
       rank:           rank,
       submitted_at:   new Date().toLocaleString('en-US', { timeZone:'America/Los_Angeles', dateStyle:'medium', timeStyle:'short' })
-    });
+    }).catch(e => console.warn('EmailJS failed (lead still saved):', e));
 
     document.getElementById('quizCard').style.display = 'none';
     document.getElementById('progressWrap').style.display = 'none';
     document.getElementById('successCard').style.display = 'block';
   } catch(e) {
     console.error(e);
-    errEl.textContent = 'Something went wrong. Please try again.';
+    errEl.textContent = 'Something went wrong. Please try again. (' + e.message + ')';
     errEl.style.display = 'block';
     btn.disabled = false; btn.textContent = 'Get My Free Solar Estimate';
-
   }
 }
 </script>
